@@ -1,0 +1,21 @@
+{
+    "name": "esp-as7341",
+    "version": "1.0.0",
+    "description": "A library built on esp-idf for reading AS7341 temperature sensors.",
+    "keywords": "as7341, spectrometer, light, i2c, hardware, esp-idf, esp32, esp8266",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/khoek/esp-as7341.git"
+    },
+    "authors": [
+        {
+            "name": "Keeley Hoek",
+            "email": "keeley@hoek.io",
+            "url": "https://hoek.io"
+        }
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/khoek/esp-as7341",
+    "frameworks": "espidf",
+    "platforms": "espressif32"
+}
