@@ -2,6 +2,7 @@
 #define __LIB_AS7341_H
 
 #include <driver/i2c.h>
+#include <libi2c.h>
 
 // The device ID/AUXID/REVID of the AS7341 supported by this driver.
 #define AS7341_ID_DRIVER_SUPPORTED 0b00100100
@@ -13,10 +14,15 @@
 #define AS7341_REVID_DRIVER_SUPPORTED 0b00000000
 #define MASK_AS7341_REVID_DRIVER_SUPPORTED 0b00000111
 
-// FIXME ITIME
-
 typedef enum as7341_regb_lobank {
     AS7341_REGB_LO_ASTATUS = 0x60,
+
+    // DANGER: as per spec, must read these three in this order---
+    // as with all of the 2-byte (word) size registers, but we handle
+    // the 2-byte case inside the driver.
+    AS7341_REGB_LO_ITIME_L = 0x63,
+    AS7341_REGB_LO_ITIME_M = 0x64,
+    AS7341_REGB_LO_ITIME_H = 0x65,
 
     AS7341_REGB_LO_CONFIG = 0x70,
     AS7341_REGB_LO_STAT = 0x71,
@@ -130,8 +136,7 @@ static __always_inline uint8_t MK_AS7341_LO_LED(bool act, uint8_t led_drive) {
 #define AS7341_HI_CFG_1_AGAIN_x256 9
 #define AS7341_HI_CFG_1_AGAIN_x512 10
 
-typedef struct as7341 as7341_t;
-typedef as7341_t* as7341_handle_t;
+typedef i2c_7bit_handle_t as7341_handle_t;
 
 // Register the AS7341 on the given I2C bus.
 esp_err_t as7341_init(i2c_port_t port, uint8_t addr, as7341_handle_t* out_dev);

@@ -1,47 +1,15 @@
 #include <driver/i2c.h>
 #include <esp_log.h>
 #include <libesp.h>
+#include <libi2c.h>
 
-#include "private.h"
+#include "esp-as7341.h"
 
-static esp_err_t reg_read_failtolerant(as7341_handle_t dev, uint8_t reg, size_t count, uint8_t* data) {
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (((uint8_t) dev->addr) << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(cmd, ((uint8_t) reg), true);
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (((uint8_t) dev->addr) << 1) | I2C_MASTER_READ, true);
-    i2c_master_read(cmd, data, count, I2C_MASTER_LAST_NACK);
-    i2c_master_stop(cmd);
-
-    esp_err_t ret = i2c_master_cmd_begin(dev->port, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-
-    return ret;
-}
-
-static esp_err_t reg_write_failtolerant(as7341_handle_t dev, uint8_t reg, size_t count, const uint8_t* data) {
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (((uint8_t) dev->addr) << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(cmd, ((uint8_t) reg), true);
-    i2c_master_write(cmd, data, count, true);
-    i2c_master_stop(cmd);
-
-    esp_err_t ret = i2c_master_cmd_begin(dev->port, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-
-    return ret;
-}
+static const char* TAG = "as7341";
 
 esp_err_t as7341_init(i2c_port_t port, uint8_t addr, as7341_handle_t* out_dev) {
-    assert(!(addr & 0x80));
-
-    as7341_handle_t dev = malloc(sizeof(as7341_t));
-    dev->addr = addr;
-    dev->port = port;
+    as7341_handle_t dev;
+    i2c_7bit_init(port, addr, &dev);
 
     // As per spec, there is a power-on reset (POR) which occurs on startup,
     // typically 200us. During this time the device will NAK us, so we cannot
@@ -49,7 +17,7 @@ esp_err_t as7341_init(i2c_port_t port, uint8_t addr, as7341_handle_t* out_dev) {
     util_wait_micros(500);
 
     uint8_t reg_id;
-    if (reg_read_failtolerant(dev, AS7341_REGB_HI_ID, 1, &reg_id) != ESP_OK) {
+    if (i2c_7bit_reg_read(dev, AS7341_REGB_HI_ID, 1, &reg_id) != ESP_OK) {
         ESP_LOGE(TAG, "I2C read failed, are I2C pin numbers/address correct?");
         goto as7341_init_fail;
     }
@@ -68,17 +36,17 @@ esp_err_t as7341_init(i2c_port_t port, uint8_t addr, as7341_handle_t* out_dev) {
     return ESP_OK;
 
 as7341_init_fail:
-    free(dev);
+    i2c_7bit_destroy(dev);
     return ESP_FAIL;
 }
 
 void as7341_destroy(as7341_handle_t dev) {
-    free(dev);
+    i2c_7bit_destroy(dev);
 }
 
 static uint8_t regb_read(as7341_handle_t dev, uint8_t reg) {
     uint8_t val;
-    ESP_ERROR_CHECK(reg_read_failtolerant(dev, reg, 1, &val));
+    ESP_ERROR_CHECK(i2c_7bit_reg_read(dev, reg, 1, &val));
 
     ESP_LOGD(TAG, "reg_readb(0x%02X)=0x%02X", reg, val);
     return val;
@@ -95,7 +63,7 @@ static uint16_t regw_read(as7341_handle_t dev, uint8_t reg) {
     // second byte and a potential simultaneous update.)
 
     uint8_t data[2];
-    ESP_ERROR_CHECK(reg_read_failtolerant(dev, reg, 2, data));
+    ESP_ERROR_CHECK(i2c_7bit_reg_read(dev, reg, 2, data));
 
     uint16_t val = (((uint16_t) data[0]) << 0) | (((uint16_t) data[1]) << 8);
 
@@ -104,7 +72,7 @@ static uint16_t regw_read(as7341_handle_t dev, uint8_t reg) {
 }
 
 static void regb_write(as7341_handle_t dev, uint8_t reg, uint8_t val) {
-    ESP_ERROR_CHECK(reg_write_failtolerant(dev, reg, 1, &val));
+    ESP_ERROR_CHECK(i2c_7bit_reg_write(dev, reg, 1, &val));
 
     ESP_LOGD(TAG, "reg_writeb(0x%02X)=0x%02X", reg, val);
 }
@@ -118,7 +86,7 @@ static void regw_write(as7341_handle_t dev, uint8_t reg, uint16_t val) {
     uint8_t data[2];
     data[0] = (val & 0x00FF) >> 0;
     data[1] = (val & 0xFF00) >> 8;
-    ESP_ERROR_CHECK(reg_write_failtolerant(dev, reg, 2, data));
+    ESP_ERROR_CHECK(i2c_7bit_reg_write(dev, reg, 2, data));
 
     ESP_LOGD(TAG, "reg_writew(0x%02X)=0x%04X", reg, val);
 }

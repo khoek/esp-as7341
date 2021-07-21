@@ -17,5 +17,9 @@
     "license": "MIT",
     "homepage": "https://github.com/khoek/esp-as7341",
     "frameworks": "espidf",
-    "platforms": "espressif32"
+    "platforms": "espressif32",
+    "dependencies": {
+        "khoek/libi2c": "^1.0.0",
+        "khoek/libesp": "^1.1.0"
+    }
 }
