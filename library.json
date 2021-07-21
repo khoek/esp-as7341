@@ -1,6 +1,6 @@
 {
     "name": "esp-as7341",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "A library built on esp-idf for reading AS7341 temperature sensors.",
     "keywords": "as7341, spectrometer, light, sensor, i2c, hardware, esp-idf, esp32, esp8266",
     "repository": {
